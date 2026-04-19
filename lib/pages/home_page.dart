@@ -83,12 +83,26 @@ class HomePage extends StatelessWidget {
     }
   }
 
+  int _crossAxisCount(double width) {
+    if (width < 600) return 2;       // Mobile: 2 cards
+    if (width < 900) return 3;       // Tablet portrait: 3 cards
+    if (width < 1200) return 4;      // Tablet landscape / small desktop: 4 cards
+    return 5;                         // Large desktop: 5 cards
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Flash Word Book'),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        title: const Text(
+          'Flash Word Book',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: colorScheme.primaryContainer,
+        foregroundColor: colorScheme.onPrimaryContainer,
+        elevation: 0,
       ),
       body: Consumer<WordProvider>(
         builder: (context, provider, child) {
@@ -96,10 +110,17 @@ class HomePage extends StatelessWidget {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
-                child: Text(
-                  'Error: ${provider.error}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.red[700], fontSize: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline, size: 48, color: colorScheme.error),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error: ${provider.error}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: colorScheme.error, fontSize: 16),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -110,15 +131,54 @@ class HomePage extends StatelessWidget {
           }
           
           if (provider.words.isEmpty) {
-            return const Center(
-              child: Text('No words added yet. Tap + to add from clipboard.'),
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.menu_book_outlined,
+                    size: 64,
+                    color: colorScheme.primary.withValues(alpha: 0.4),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No words added yet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap the button below to add from clipboard',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             );
           }
 
-          return ListView.builder(
-            itemCount: provider.words.length,
-            itemBuilder: (context, index) {
-              return WordCard(entry: provider.words[index]);
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final crossAxisCount = _crossAxisCount(constraints.maxWidth);
+              
+              return GridView.builder(
+                padding: const EdgeInsets.all(12),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 0.85,
+                ),
+                itemCount: provider.words.length,
+                itemBuilder: (context, index) {
+                  return WordCard(entry: provider.words[index]);
+                },
+              );
             },
           );
         },
