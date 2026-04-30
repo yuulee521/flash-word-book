@@ -1,0 +1,41 @@
+name: Jules PR Preview to GitHub Pages
+
+on:
+  # 只要有 PR 提交、更新或重新打开，就触发
+  pull_request:
+    branches:
+      - main
+  # (可选) 你手动往 main 推代码时也更新一次
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        # ⚠️ 记得把 "你的仓库名" 换成真实的，否则手机上会白屏
+        run: flutter build web --release --base-href="/flash-word-book/"
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+          # 确保它总是推送到这个分支，它是 GitHub Pages 的数据源
+          publish_branch: gh-pages
