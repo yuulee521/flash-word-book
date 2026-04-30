@@ -40,15 +40,15 @@ class _WordSelectionSheetState extends State<_WordSelectionSheet> {
     // Determine the keyboard padding so input is not hidden by the keyboard
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.5,
-      minChildSize: 0.3,
-      maxChildSize: 0.9,
-      expand: false,
-      builder: (context, scrollController) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: bottomPadding),
-          child: Column(
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomPadding),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) {
+          return Column(
             children: [
               const Padding(
                 padding: EdgeInsets.all(16.0),
@@ -109,9 +109,9 @@ class _WordSelectionSheetState extends State<_WordSelectionSheet> {
                       ),
               ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
