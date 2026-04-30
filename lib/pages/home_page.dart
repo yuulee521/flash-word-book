@@ -4,20 +4,122 @@ import 'package:provider/provider.dart';
 import '../providers/word_provider.dart';
 import '../widgets/word_card.dart';
 
+class _WordSelectionSheet extends StatefulWidget {
+  final String initialText;
+
+  const _WordSelectionSheet({required this.initialText});
+
+  @override
+  State<_WordSelectionSheet> createState() => _WordSelectionSheetState();
+}
+
+class _WordSelectionSheetState extends State<_WordSelectionSheet> {
+  final TextEditingController _textController = TextEditingController();
+  List<String> _words = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _updateWords(widget.initialText);
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  void _updateWords(String text) {
+    setState(() {
+      _words = text.split(RegExp(r'\W+')).where((s) => s.isNotEmpty).toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Determine the keyboard padding so input is not hidden by the keyboard
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomPadding),
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Select words to add',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _textController,
+                        decoration: const InputDecoration(
+                          hintText: 'Type words here...',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () {
+                        _updateWords(_textController.text);
+                      },
+                      tooltip: 'Refresh word list',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8.0),
+              Expanded(
+                child: _words.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No words to display.',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: scrollController,
+                        itemCount: _words.length,
+                        itemBuilder: (context, index) {
+                          final word = _words[index];
+                          return ListTile(
+                            title: Text(word),
+                            trailing: const Icon(Icons.add),
+                            onTap: () {
+                              context.read<WordProvider>().addWord(word);
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Adding "$word"...')),
+                              );
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   void _showWordSelectionSheet(BuildContext context, String text) {
-    // Split by non-word characters and filter empty strings
-    final words = text.split(RegExp(r'\W+')).where((s) => s.isNotEmpty).toList();
-    
-    if (words.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No words found in clipboard.')),
-      );
-      return;
-    }
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -25,61 +127,16 @@ class HomePage extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.5,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            return Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text(
-                    'Select words to add',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: words.length,
-                    itemBuilder: (context, index) {
-                      final word = words[index];
-                      return ListTile(
-                        title: Text(word),
-                        trailing: const Icon(Icons.add),
-                        onTap: () {
-                          context.read<WordProvider>().addWord(word);
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Adding "$word"...')),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        );
+        return _WordSelectionSheet(initialText: text);
       },
     );
   }
 
   Future<void> _addFromClipboard(BuildContext context) async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
-    if (data != null && data.text != null && data.text!.isNotEmpty) {
-      if (context.mounted) {
-        _showWordSelectionSheet(context, data.text!);
-      }
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Clipboard is empty.')),
-        );
-      }
+    if (context.mounted) {
+      final clipboardText = data?.text ?? '';
+      _showWordSelectionSheet(context, clipboardText);
     }
   }
 
@@ -151,7 +208,7 @@ class HomePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Tap the button below to add from clipboard',
+                    'Tap the button below to add words',
                     style: TextStyle(
                       fontSize: 14,
                       color: colorScheme.onSurfaceVariant,
@@ -185,8 +242,8 @@ class HomePage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addFromClipboard(context),
-        label: const Text('Add from Clipboard'),
-        icon: const Icon(Icons.content_paste),
+        label: const Text('Add Words'),
+        icon: const Icon(Icons.add),
       ),
     );
   }
