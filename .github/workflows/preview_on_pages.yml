@@ -27,7 +27,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Web
-        run: flutter build web --release --base-href="/flash-word-book/"
+        run: flutter build web --release --base-href="/flash-word-book/" --dart-define=WEBSTER_API_KEY="${{ secrets.WEBSTER_API_KEY }}"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
